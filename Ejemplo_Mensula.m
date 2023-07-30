@@ -74,8 +74,6 @@ for iy = 1:ES.Ny+1
 end
 
 % Matriz conectividades elementos finitos
-% IMPORTANTE INTENTAR METER SIMETRIA EN LA MALLA SI EL PROBLEMA ES
-% SIMETRICO
 % [Elem, Mat, Nod1, Nod2, Nod3]
 ES.Nelem = 2*ES.Nx*ES.Ny;
 ES.Melem = zeros(ES.Nelem,5);
@@ -90,7 +88,6 @@ for iy = 1:ES.Ny/2
         ES.Melem(pos,1:5) = [pos, 2, n1, n1+2+ES.Nx, n1+1+ES.Nx];
         n1 = n1 + 1;
     end
-    % orden = not(orden);
     n1 = n1 + 1;
 end
 % Tramo superior
@@ -102,11 +99,10 @@ for iy = (ES.Ny/2+1):ES.Ny
         ES.Melem(pos,1:5) = [pos, 2, n1+1, n1+2+ES.Nx, n1+1+ES.Nx];
         n1 = n1 + 1;
     end
-    % orden = not(orden);
     n1 = n1 + 1;
 end
 
-% Funcion phi inicial
+% Funcion de nivel inicial
 ES.psi = ES.fpsi(ES.Mnodo(:,2), ES.Mnodo(:,3));
 
 % =========================================================================
@@ -115,7 +111,7 @@ ES.psi = ES.fpsi(ES.Mnodo(:,2), ES.Mnodo(:,3));
 
 % NOTA:
 % Todas las matrices que a continuacion se definen, aun en los casos
-% en que no se coloque ninguno del tipo de apoyo que se se�ala hay que
+% en que no se coloque ninguno del tipo de apoyo que se seniala hay que
 % indicar la matriz vacia.
 
 % NOTA 2:
