@@ -176,14 +176,19 @@ if strcmp(tipo,'UX') %Desplazamientos segun X
    end  
     % Escribire en la figura abierta
     
-   if bord==0
-      Opcion='none';
-    else
-      Opcion='k';
-    end
     
     hold on;
-    trisurf(Melem,Mnodo(:,1),Mnodo(:,2),Ui,Ui,'FaceColor','interp','EdgeColor',Opcion);
+    trisurf(Melem,Mnodo(:,1),Mnodo(:,2),Ui,Ui,'FaceColor','interp','EdgeColor','none');
+    
+     if bord==1
+        Mnodo = ES.Mnodo(:,2:3); % Se inicia matriz de nodos
+        Melem = ES.Melem(:,3:5); zeros(sum(ES.EI)*3,3); % Idem para la matriz de elementos
+        Ui=ES.U(1:2:(2*ES.Nnodo-1));
+        
+        trisurf(Melem,Mnodo(:,1),Mnodo(:,2),Ui,Ui,'FaceColor','none','EdgeColor','k');
+    end
+        
+    
     
 elseif strcmp(tipo,'UY') %Desplazamientos segun Y
   
@@ -350,15 +355,17 @@ elseif strcmp(tipo,'UY') %Desplazamientos segun Y
      Melem(Vac==1,:)=[]; % Se los elimina de la matriz de elementos para el trisurf
    end  
     % Escribire en la figura abierta
-    
-   if bord==0
-      Opcion='none';
-    else
-      Opcion='k';
-    end
-    
+  
     hold on;
-    trisurf(Melem,Mnodo(:,1),Mnodo(:,2),Ui,Ui,'FaceColor','interp','EdgeColor',Opcion);
+    trisurf(Melem,Mnodo(:,1),Mnodo(:,2),Ui,Ui,'FaceColor','interp','EdgeColor','none');
+    
+    if bord==1
+        Mnodo = ES.Mnodo(:,2:3); % Se inicia matriz de nodos
+        Melem = ES.Melem(:,3:5); zeros(sum(ES.EI)*3,3); % Idem para la matriz de elementos
+        Ui=ES.U(2:2:(2*ES.Nnodo));
+        
+        trisurf(Melem,Mnodo(:,1),Mnodo(:,2),Ui,Ui,'FaceColor','none','EdgeColor','k');
+    end
     
 elseif strcmp(tipo,'DEF') %Deformada
   
@@ -536,14 +543,20 @@ elseif strcmp(tipo,'DEF') %Deformada
    
     % Escribire en la figura abierta
     
-    if bord==0
-      Opcion='none';
-    else
-      Opcion='k';
-    end
     
     hold on;
-    trisurf(Melem,Mnodo(:,1)+Scale*UiX,Mnodo(:,2)+Scale*UiY,sqrt(UiX.^2+UiY.^2),sqrt(UiX.^2+UiY.^2),'FaceColor','interp','EdgeColor',Opcion);
+    trisurf(Melem,Mnodo(:,1)+Scale*UiX,Mnodo(:,2)+Scale*UiY,sqrt(UiX.^2+UiY.^2),sqrt(UiX.^2+UiY.^2),'FaceColor','interp','EdgeColor','none');
+    
+    if bord==1
+        Mnodo = ES.Mnodo(:,2:3); % Se inicia matriz de nodos
+        Melem = ES.Melem(:,3:5); zeros(sum(ES.EI)*3,3); % Idem para la matriz de elementos
+        Ui=sqrt(ES.U(1:2:(2*ES.Nnodo-1)).^2+ES.U(2:2:(2*ES.Nnodo)).^2);
+        Uix = ES.U(1:2:(2*ES.Nnodo-1));
+        Uiy = ES.U(2:2:(2*ES.Nnodo));
+        
+        trisurf(Melem,Mnodo(:,1)+Scale*Uix,Mnodo(:,2)+Scale*Uiy,Ui,Ui,'FaceColor','none','EdgeColor','k');
+    end
+    
     
 elseif strcmp(tipo,'Psi') % Level Set
   
@@ -647,13 +660,19 @@ elseif strcmp(tipo,'Psi') % Level Set
     
 
    % Escribire en la figura abierta
-    if bord==0
-      Opcion='none';
-    else
-      Opcion='k';
-    end
+    
     hold on;
-    trisurf(Melem,Mnodo(:,1),Mnodo(:,2),Ui,Ui,'FaceColor','interp','EdgeColor',Opcion);
+    trisurf(Melem,Mnodo(:,1),Mnodo(:,2),Ui,Ui,'FaceColor','interp','EdgeColor','none');
+    
+    
+    if bord==1
+        Mnodo = ES.Mnodo(:,2:3); % Se inicia matriz de nodos
+        Melem = ES.Melem(:,3:5); zeros(sum(ES.EI)*3,3); % Idem para la matriz de elementos
+        Ui=ES.psi;
+        
+        trisurf(Melem,Mnodo(:,1),Mnodo(:,2),Ui,Ui,'FaceColor','none','EdgeColor','k');
+    end
+    
     
 elseif strcmp(tipo,'Mat') % Zonas con material
   
@@ -784,24 +803,34 @@ elseif strcmp(tipo,'Mat') % Zonas con material
     end
 
    % Escribire en la figura abierta
-    if bord==0
-      Opcion='none';
-    else
-      Opcion='k';
-    end
+    
 
     hold on;
     MelemAux=Melem(Vac==0,:);
 	
     if size(MelemAux,1)>0
-      trisurf(MelemAux,Mnodo(:,1),Mnodo(:,2),Ui,Ui,'FaceColor','k','EdgeColor',Opcion);
+	  if bord==1
+         trisurf(MelemAux,Mnodo(:,1),Mnodo(:,2),Ui,Ui,'FaceColor',[0.5 0.5 0.5],'EdgeColor','none');
+	  else
+	     trisurf(MelemAux,Mnodo(:,1),Mnodo(:,2),Ui,Ui,'FaceColor','k','EdgeColor','none');
+	  end
     end
     
     MelemAux=Melem(Vac==1,:);
 	
     if size(MelemAux,1)>0
-       trisurf(MelemAux,Mnodo(:,1),Mnodo(:,2),Ui,Ui,'FaceColor','w','EdgeColor',Opcion);
+       trisurf(MelemAux,Mnodo(:,1),Mnodo(:,2),Ui,Ui,'FaceColor','w','EdgeColor','none');
     end
+    
+    if bord==1
+        Mnodo = ES.Mnodo(:,2:3); % Se inicia matriz de nodos
+        Melem = ES.Melem(:,3:5); zeros(sum(ES.EI)*3,3); % Idem para la matriz de elementos
+        Ui = ES.psi;
+        
+        trisurf(Melem,Mnodo(:,1),Mnodo(:,2),Ui,Ui,'FaceColor','none','EdgeColor','k');
+    end
+        
+    
     
 elseif strcmp(tipo,'DTC') % Derivada topologica de la complacencia
   
@@ -1738,7 +1767,8 @@ elseif startsWith(tipo,'Sigma')
         for i=1:length(d)
             d(i) = (Mnodo(i+PosN,1)-Mnodo(PosN,1))^2 + (Mnodo(i+PosN,2)-Mnodo(PosN,2))^2;
         end
-        DeltaDist=0.5*ES.Lx/ES.Nx + 0.5*ES.Ly/ES.Ny;
+        DeltaDist=sqrt( (ES.Mnodo(2,2)-ES.Mnodo(1,2)).^2 + (ES.Mnodo(2,3)-ES.Mnodo(1,3)).^2 ); % Distancia media de elemento.
+        % Es solo un parametro casi arbitrario
         indAux=d<DeltaDist*1e-12;
         ind=1:length(d); ind=ind+PosN;
         ind=ind(indAux);
@@ -1768,19 +1798,27 @@ elseif startsWith(tipo,'Sigma')
    
 
    % Escribire en la figura abierta
-    if bord==0
-      Opcion='none';
-    else
-      Opcion='k';
-    end
+   
     hold on;
-    trisurf(Melem,Mnodo(:,1),Mnodo(:,2),Ui,Ui,'FaceColor','interp','EdgeColor',Opcion);
+    trisurf(Melem,Mnodo(:,1),Mnodo(:,2),Ui,Ui,'FaceColor','interp','EdgeColor','none');
+    
+    
+    
+    if bord==1
+        Mnodo = ES.Mnodo(:,2:3); % Se inicia matriz de nodos
+        Melem = ES.Melem(:,3:5); zeros(sum(ES.EI)*3,3); % Idem para la matriz de elementos
+        Ui=Ui(1:length(Mnodo(:,1)));
+        
+        trisurf(Melem,Mnodo(:,1),Mnodo(:,2),Ui,Ui,'FaceColor','none','EdgeColor','k');
+    end
+    
 elseif strcmp(tipo,'B')
     
 % Eta y XI en los nodos del triangulo
 ETN = [0 1 0];
 XIN = [0 0 1];
     hold on;
+    Z = max(get(gca,'zlim'));
     
     for ele = 1:ES.Nelem
         
@@ -1829,12 +1867,39 @@ XIN = [0 0 1];
             N = zeros(2,3);
             N(:,1) = 1-etc-xic; N(:,2) = etc; N(:,3) = xic;
             XYI = N*XYe;
-            
-            % plot3(XYI(:,1), XYI(:,2),  15+0*XYI(:,2), 'r', 'linewidth',2)
-            plot(XYI(:,1), XYI(:,2), 'r', 'linewidth',2)
+                        
+             plot3(XYI(:,1), XYI(:,2),  Z*ones(1,length(XYI(:,1))), 'r', 'linewidth',2)
+           % plot(XYI(:,1), XYI(:,2), 'r', 'linewidth',2)
         end
     end    
+elseif  strcmp(tipo,'DomTens') % Dominio con chequeo de tensiones
+     Mnodo = ES.Mnodo(:,2:3); % Se inicia matriz de nodos
+    Melem = ES.Melem(:,3:5); % Idem para la matriz de elementos
+    Ui = 0*ES.psi; 
+
+   
+    hold on;
+    MelemAux=Melem(ES.ChequeoSigma==1,:);
+	
+    if size(MelemAux,1)>0
+	  if bord==1
+         trisurf(MelemAux,Mnodo(:,1),Mnodo(:,2),Ui,Ui,'FaceColor',[0.3 0.3 0.3],'EdgeColor','k');
+	  else
+	     trisurf(MelemAux,Mnodo(:,1),Mnodo(:,2),Ui,Ui,'FaceColor',[0.3 0.3 0.3],'EdgeColor','none');
+	  end
+    end
     
+    MelemAux=Melem(ES.ChequeoSigma==0,:);
+	
+    if size(MelemAux,1)>0
+        if bord==1
+           trisurf(MelemAux,Mnodo(:,1),Mnodo(:,2),Ui,Ui,'FaceColor',[0.7 0.7 0.7],'EdgeColor','k');
+        else
+           trisurf(MelemAux,Mnodo(:,1),Mnodo(:,2),Ui,Ui,'FaceColor',[0.7 0.7 0.7],'EdgeColor','none');
+        end       
+    end
+    
+        
 end
 
 

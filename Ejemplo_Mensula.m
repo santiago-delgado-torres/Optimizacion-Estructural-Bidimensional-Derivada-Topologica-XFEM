@@ -37,7 +37,7 @@ ES.PEL=1;
 % Dimensiones y mallado
 ES.Lx = 2.0;
 ES.Ly = 1.0;
-ES.Nx = 60; %Numero de subdivisiones segun X. (Cantidad de elementos)
+ES.Nx = 100; %Numero de subdivisiones segun X. (Cantidad de elementos/2)
 ES.Ny = ES.Nx/2; %Numero de subdivisiones segun Y
 
 % Funcion de nivel inicial para los vacios
@@ -74,6 +74,8 @@ for iy = 1:ES.Ny+1
 end
 
 % Matriz conectividades elementos finitos
+% IMPORTANTE INTENTAR METER SIMETRIA EN LA MALLA SI EL PROBLEMA ES
+% SIMETRICO
 % [Elem, Mat, Nod1, Nod2, Nod3]
 ES.Nelem = 2*ES.Nx*ES.Ny;
 ES.Melem = zeros(ES.Nelem,5);
@@ -88,6 +90,7 @@ for iy = 1:ES.Ny/2
         ES.Melem(pos,1:5) = [pos, 2, n1, n1+2+ES.Nx, n1+1+ES.Nx];
         n1 = n1 + 1;
     end
+    % orden = not(orden);
     n1 = n1 + 1;
 end
 % Tramo superior
@@ -99,10 +102,11 @@ for iy = (ES.Ny/2+1):ES.Ny
         ES.Melem(pos,1:5) = [pos, 2, n1+1, n1+2+ES.Nx, n1+1+ES.Nx];
         n1 = n1 + 1;
     end
+    % orden = not(orden);
     n1 = n1 + 1;
 end
 
-% Funcion de nivel inicial
+% Funcion phi inicial
 ES.psi = ES.fpsi(ES.Mnodo(:,2), ES.Mnodo(:,3));
 
 % =========================================================================
@@ -111,7 +115,7 @@ ES.psi = ES.fpsi(ES.Mnodo(:,2), ES.Mnodo(:,3));
 
 % NOTA:
 % Todas las matrices que a continuacion se definen, aun en los casos
-% en que no se coloque ninguno del tipo de apoyo que se seniala hay que
+% en que no se coloque ninguno del tipo de apoyo que se se�ala hay que
 % indicar la matriz vacia.
 
 % NOTA 2:
@@ -148,8 +152,8 @@ ES.psi = ES.fpsi(ES.Mnodo(:,2), ES.Mnodo(:,3));
 %         TENER QUE ROTAR LA MATRIZ
 % Val: Valor del desplazamiento prescrito en la direccion prescrita.
 %      El sentido positivo de esta direccion es antihorario al eje definido
-%      por angulo. Es decir si Angulo=20 grados, entonces el desplazamiento dado
-%      por Val es positivo a un angulo de 110 grados.
+%      por angulo. Es decir si Angulo=20�, entonces el desplazamiento dado
+%      por Val es positivo a un angulo de 110�.
 
 ES.CB.Dir.Nod.Fijo=[]; %No tengo de este tipo de apoyos en el ejemplo
 ES.CB.Dir.Nod.Desl=[]; %Idem
@@ -216,7 +220,7 @@ ES.CB.Dir.Nod.Desl=[]; %Idem
 
 % Se apoya en toda direccion el borde izquierdo
 Aux=(2):(2*ES.Nx):ES.Nelem/2; % Se puede ver que por la creacion de la malla son estos los elementos.
-Aux2=(ES.Nelem/2+1):(2*ES.Nx):(ES.Nelem-1); %Y estos en el tramo superior
+Aux2=(ES.Nelem/2+1):(2*ES.Nx):(ES.Nelem-1);
 Aux=[Aux,Aux2];
 
 ES.CB.Dir.Lin.Fijo=[Aux',3*ones(length(Aux),1),zeros(length(Aux),1),zeros(length(Aux),1)];
@@ -241,13 +245,13 @@ ES.NLC=1;
 % ValX: Valor de la fuerza puntual segun X
 % ValY: Valor de la fuerza puntual segun Y
 
-ES.CB.Neu.Punt=[(ES.Ny/2+1)*(ES.Nx+1),0,-1]; %Fuerza descendente en el centro de la cara derecha
+ES.CB.Neu.Punt=[(ES.Ny/2+1)*(ES.Nx+1),0,-1];
 
 
 % Condiciones de Neumann - Fuerzas por unidad de longitud, uniformes, en bordes de elementos.
 % -------------------------------------------------------------------------------------------
 %
-% Se seniala el numero de elemento y que borde es.
+% Se se�ala el numero de elemento y que borde es.
 %
 % Obs: Si se aplica una fuerza en un borde entre 2 elementos, se recomienda
 % ingresarla en un solo elemento, en caso contrario la fuerza se duplica.
@@ -332,19 +336,27 @@ ES.Must=zeros(ES.Nnodo,1);
 
 ES.ChequeoSigma=ones(ES.Nelem,1); 
 % Variable logica que indica en que elementos SI se requiere verificar las
-% tensiones. - En este caso que no se limita tensiones no importa su valor.
+% tensiones.
+
+ES.MeshReg=true; % Es una malla regular (para seleccion del suavizado)
 
 
-M = 0.4; % Porcentaje del volumen a buscar
-c = 40; %Valor para el coeficiente de penalidad del volumen al cuadrado (Lagrangiano fijo)
-alpha = 0; %Valor para el coeficiente de penalidad de las tensiones
-TolDeltaV = 0.01; % En fraccion, minimo deltavolumen si se usa el indicador
+M = 0.5; % Porcentaje del volumen a buscar
+c = 34; %Valor para el coeficiente de penalidad del volumen al cuadrado (Lagrangiano fijo)
+alpha = 0; %Valor para el coeficiente de penalidad de las tensiones.e
+TolDeltaV = 0.02; % En fraccion, minimo deltavolumen si se usa el indicador
 % como siguiente iteracion (Kappa=1)
+% Si este volumen es muy chico se considera que se encontro la estructura
+% optima y se modifica el lagrangiano.
 DeltaVMax= 1; %Cuanto es el DeltaVolumen maximo admisible en una iteracion (En fraccion del total)
-TolM = 2e-3; % Fraccion de volumen respecto a la cual M se considera que se llego
-MaxSit=10; %Maximo de subiteraciones
-Smooth=.2; %Coeficiente de suavizado
+TolM = 1e-2; % Fraccion de volumen respecto a la cual M se considera que se llego
+MaxSit=10;
+Smooth=0.18;
 
+
+% ESTA FORMA PUEDE NO SER LA MEJOR PARA MULTIPLES CASOS DE CARGA PUES
+% PODRIA HABER UNO DE SUMA DONDE LA TENSION MAXIMA SUPERE EL LIMITE. SE
+% PODRIA AJUSTAR CON LA TENSION DE FLUENCIA
 
 ES = Optimizacion(ES,M,c,alpha,TolDeltaV,DeltaVMax,TolM,MaxSit,Smooth);
 
