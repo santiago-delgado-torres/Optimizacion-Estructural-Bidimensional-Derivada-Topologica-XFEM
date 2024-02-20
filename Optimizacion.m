@@ -289,6 +289,13 @@ while flagV
                    end
                end
 
+               
+
+               if sum(ES.Must)>0 % Si hay algun nodo obligatorio
+                   ES.psi(ES.Must) = abs ( ES.psi(ES.Must) ); % a pesar dle smoothing obligamos que los must se mantengan
+               end
+
+
                ES=interfase(ES); % Chequeo inicial de interfases. Es posible que haya habido cambios y no estan aun actualiados
                Omega = VolumenXFEM(ES);
 
@@ -350,9 +357,6 @@ while flagV
 
            
 
-           if sum(ES.Must)>0 % Si hay algun nodo obligatorio
-               ES.psi(ES.Must) = abs ( ES.psi(ES.Must) ); % a pesar dle smoothing obligamos que los must se mantengan
-           end
 
            % Corregimos el volumen
            ES=interfase(ES); % Chequeo inicial de interfases. Es posible que haya habido cambios y no estan aun actualiados
