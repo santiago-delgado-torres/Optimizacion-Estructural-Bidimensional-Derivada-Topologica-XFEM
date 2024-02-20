@@ -1,4 +1,4 @@
-function ES = Optimizacion(ES,M,c,alpha,TolDeltaV,DeltaVMax,TolM,MaxSit,SmoothingCoef)
+function ES = Optimizacion(ES,M,c,alpha,TolDeltaV,DeltaVMax,TolM,MaxSit,SmoothingCoef,DeCaSmooth)
 % Rutina para intentar optimizar la estructura con el metodo de penalidad
 % para las tensiones y lagrangiano aumentado para el area final
 % 
@@ -146,6 +146,30 @@ while flagV
    PhiNoMust = Phi(~ES.Must); % Solo nos quedamos con aquellos que no son obligatorios
    PsiNoMust = ES.psi(~ES.Must); %Idem para psi
    
+   %{
+   if SmoothingCoef>0
+       % Paso de suavizar
+       if ES.MeshReg && ES.Nnodo == (ES.Nx+1)*(ES.Ny+1) %Caso sencillo y rapido, todo el rectangulo tiene elementos y la malla es estructurada
+           PSI = reshape(PsiNoMust,ES.Nx+1,ES.Ny+1); % Forma matricial para el level set
+           [PSI,~]=smoothn(PSI,SmoothingCoef);
+           PsiNoMust=smoothn(PSI,SmoothingCoef);
+       elseif ES.MeshReg % Al menos es estructurada
+           xPSI = ES.xm:ES.dx:ES.xM;
+           yPSI = ES.ym:ES.dy:ES.yM;
+           [xPSI,yPSI] = meshgrid(xPSI,yPSI);
+           F = scatteredInterpolant(ES.Mnodo(:,2),ES.Mnodo(:,3),PsiNoMust,'linear');
+           PSI = F(xPSI,yPSI);
+           [PSI,~]=smoothn(PSI,SmoothingCoef);
+           F = scatteredInterpolant(xPSI(:),yPSI(:),PSI(:));
+           PsiNoMust = F(ES.Mnodo(:,2),ES.Mnodo(:,3));
+       else % Este es el caso mas lento de smoothing
+           f = fit( ES.Mnodo(:,2:3), PsiNoMust,'lowess','Span',SmoothingCoef);
+           PsiNoMust = f(ES.Mnodo(:,2:3));
+       end
+   end
+   %}
+
+   
    % ANGULO ENTRE EL LEVEL SET ACTUAL Y ESTA DIRECCION
 
    normphi = sqrt( PhiNoMust' * MasaNoMust *PhiNoMust );
@@ -243,6 +267,27 @@ while flagV
                sit = sit+1;
                ES.psi(~ES.Must) = 1/sind(theta) * ( sind( (1-Kappa) * theta ) *psiOld + sind ( Kappa*theta ) * PhiNoMust/normphi   );
 
+               if SmoothingCoef>0
+                   % Paso de suavizar
+                   if ES.MeshReg && ES.Nnodo == (ES.Nx+1)*(ES.Ny+1) %Caso sencillo y rapido, todo el rectangulo tiene elementos y la malla es estructurada
+                       PSI = reshape(ES.psi,ES.Nx+1,ES.Ny+1); % Forma matricial para el level set
+                       [PSI,~]=smoothn(PSI,SmoothingCoef/(DeCaSmooth^(sit-1)));
+                       ES.psi=reshape(PSI,ES.Nnodo,1);
+                   elseif ES.MeshReg % Al menos es estructurada
+                       xPSI = ES.xm:ES.dx:ES.xM;
+                       yPSI = ES.ym:ES.dy:ES.yM;
+                       [xPSI,yPSI] = meshgrid(xPSI,yPSI);
+                       F = scatteredInterpolant(ES.Mnodo(:,2),ES.Mnodo(:,3),ES.psi,'linear');
+                       PSI = F(xPSI,yPSI);
+                       [PSI,~]=smoothn(PSI,SmoothingCoef/(DeCaSmooth^(sit-1)));
+                       F = scatteredInterpolant(xPSI(:),yPSI(:),PSI(:));
+                       ES.psi = F(ES.Mnodo(:,2),ES.Mnodo(:,3));
+                   else % Este es el caso mas lento de smoothing
+                       f = fit( ES.Mnodo(:,2:3), ES.psi,'lowess','Span',SmoothingCoef/(DeCaSmooth^(sit-1)));
+                       ES.psi = f(ES.Mnodo(:,2:3));
+
+                   end
+               end
 
                ES=interfase(ES); % Chequeo inicial de interfases. Es posible que haya habido cambios y no estan aun actualiados
                Omega = VolumenXFEM(ES);
@@ -303,28 +348,7 @@ while flagV
                 c=c*2;
            end
 
-           if SmoothingCoef>0
-               % Paso de suavizar
-               if ES.MeshReg && ES.Nnodo == (ES.Nx+1)*(ES.Ny+1) %Caso sencillo y rapido, todo el rectangulo tiene elementos y la malla es estructurada
-                   PSI = reshape(ES.psi,ES.Nx+1,ES.Ny+1); % Forma matricial para el level set
-                   [PSI,~]=smoothn(PSI,SmoothingCoef);
-                   ES.psi=reshape(PSI,ES.Nnodo,1);
-               elseif ES.MeshReg % Al menos es estructurada
-                   xPSI = ES.xm:ES.dx:ES.xM;
-                   yPSI = ES.ym:ES.dy:ES.yM;
-                   [xPSI,yPSI] = meshgrid(xPSI,yPSI);
-                   F = scatteredInterpolant(ES.Mnodo(:,2),ES.Mnodo(:,3),ES.psi,'linear');
-                   PSI = F(xPSI,yPSI);
-                   [PSI,~]=smoothn(PSI,SmoothingCoef);
-                   F = scatteredInterpolant(xPSI(:),yPSI(:),PSI(:));
-                   ES.psi = F(ES.Mnodo(:,2),ES.Mnodo(:,3));
-               else % Este es el caso mas lento de smoothing
-                   f = fit( ES.Mnodo(:,2:3), ES.psi,'lowess','Span',SmoothingCoef);
-                   ES.psi = f(ES.Mnodo(:,2:3));
-
-               end
-           end
-
+           
 
            if sum(ES.Must)>0 % Si hay algun nodo obligatorio
                ES.psi(ES.Must) = abs ( ES.psi(ES.Must) ); % a pesar dle smoothing obligamos que los must se mantengan
