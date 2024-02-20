@@ -6,7 +6,7 @@ path(pathdef)
 clear all
 close all
 
-addpath(genpath('../../..'));
+addpath(genpath('.'));
 
 % =========================================================================
 % == Definicion de la Estructura ==========================================
