@@ -108,8 +108,11 @@ while flagV
            ES.CB.Neu.Bord=ES.CB.NeuCell.Bord{LC};
            ES.CB.Neu.Vol=ES.CB.NeuCell.Vol{LC};
        end
+       if LC==1
        ES = xfem(ES);
-
+       else
+           ES=xfem_ChangingForces(ES);
+       end
        % FUNCION DE COSTO ACTUAL - Complacencia
 
        Fomega = Fomega + ES.U'* ES.Ktotal * ES.U  ;
@@ -310,7 +313,12 @@ while flagV
                        ES.CB.Neu.Bord=ES.CB.NeuCell.Bord{LC};
                        ES.CB.Neu.Vol=ES.CB.NeuCell.Vol{LC};
                    end
+                   if LC==1
                    ES = xfem(ES);
+                   else
+                       ES=xfem_ChangingForces(ES);
+                   end
+       
 
                    % FUNCION DE COSTO - Complacencia
 
