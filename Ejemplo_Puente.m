@@ -263,7 +263,7 @@ Linea=0.55/ES.Ly*ES.Ny;
 if floor(Linea)~=Linea
     error('Revisa la cantidad de elementos segun Y porque la linea de carga no cae en borde de elemento')
 end
-Aux=ES.Nx*2*Linea+(2:2:2*ES.Nx);
+Aux=ES.Nx*2*(Linea-1)+(2:2:2*ES.Nx);
 
 ES.CB.NeuCell.Bord{2}=[2*ones(length(Aux),1), Aux', 2*ones(length(Aux),1),-10*ones(length(Aux),1)];
 ES.CB.NeuCell.Bord{3}=[ones(length(Aux),1),Aux',2*ones(length(Aux),1),1*ones(length(Aux),1)];

@@ -25,6 +25,44 @@ for i = 1:size(ES.CB.Neu.Punt,1) % Recorremos todas las entradas de la matriz as
     
 end
 
+
+% =========================================================================
+% === Fuerzas nodales de proyeccion =======================================
+% =========================================================================
+
+if isfield( ES.CB.Neu , 'PuntProy') % Admito la posibilidad de nunca haber creado este
+	
+	for i = 1:size(ES.CB.Neu.PuntProy,1) % Recorremos todas los cargas del estilo.
+	
+		flag = 1; 
+		nnod = 1;
+		
+		while flag && nnod<=length(ES.CB.Neu.PuntProy{i,1})
+			
+			if ES.psi(ES.CB.Neu.PuntProy{i,1}(nnod)) > 0 % Nodo material
+				
+				nodo = ES.CB.Neu.PuntProy{i,1}(nnod); %Este es el nodo en la cual lo aplicamos
+				flag = 0;
+				
+			else
+				nnod = nnod + 1;
+			end
+			
+		end
+		
+		if flag % No encontramos el nodo...
+			nodo = ES.CB.Neu.PuntProy{i,2}; % Usamos el pro defecto
+		end
+		
+		ES.Fext( 2*nodo - 1 ) = ES.Fext( 2*nodo -1 ) + ES.CB.Neu.PuntProy{i,3} ; % Se suma la componente segun X
+    
+		ES.Fext( 2*nodo  ) = ES.Fext( 2*nodo  ) + ES.CB.Neu.PuntProy{i,4} ; % Se suma la componente segun Y
+	
+	end
+
+end
+
+
 % =========================================================================
 % === Fuerzas en Bordes ===================================================
 % =========================================================================

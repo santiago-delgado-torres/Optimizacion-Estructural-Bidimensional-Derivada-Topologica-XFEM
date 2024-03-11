@@ -105,6 +105,9 @@ while flagV
        % Se setean las fuerzas de este caso
        if isfield(ES.CB,'NeuCell') % Se chequea si estan en formato cell. Si no lo estan solo puede haber un load case
            ES.CB.Neu.Punt=ES.CB.NeuCell.Punt{LC};
+		   if isfield(ES.CB.NeuCell,'PuntProy')
+				ES.CB.Neu.PuntProy=ES.CB.NeuCell.PuntProy{LC};
+		   end
            ES.CB.Neu.Bord=ES.CB.NeuCell.Bord{LC};
            ES.CB.Neu.Vol=ES.CB.NeuCell.Vol{LC};
        end
@@ -310,6 +313,9 @@ while flagV
                    % Se setean las fuerzas de este caso
                    if isfield(ES.CB,'NeuCell') % Se chequea si estan en formato cell. Si no lo estan solo puede haber un load case
                        ES.CB.Neu.Punt=ES.CB.NeuCell.Punt{LC};
+					   if isfield(ES.CB.NeuCell,'PuntProy')
+						ES.CB.Neu.PuntProy=ES.CB.NeuCell.PuntProy{LC};
+					   end
                        ES.CB.Neu.Bord=ES.CB.NeuCell.Bord{LC};
                        ES.CB.Neu.Vol=ES.CB.NeuCell.Vol{LC};
                    end
