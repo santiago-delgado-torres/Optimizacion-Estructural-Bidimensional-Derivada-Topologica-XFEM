@@ -353,7 +353,7 @@ TolDeltaV = 0.005; % En fraccion, minimo deltavolumen si se usa el indicador
 DeltaVMax= 1; %Cuanto es el DeltaVolumen maximo admisible en una iteracion (En fraccion del total)
 TolM = 1e-2; % Fraccion de volumen respecto a la cual M se considera que se llego
 MaxSit=10;
-Smooth=0.25;
+Smooth=0.35;
 DeCaSmooth = 1.2; % Coeficiente de decaimiento del smooth
 
 % ESTA FORMA PUEDE NO SER LA MEJOR PARA MULTIPLES CASOS DE CARGA PUES
