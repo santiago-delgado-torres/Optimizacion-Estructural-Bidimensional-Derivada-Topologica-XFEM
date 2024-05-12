@@ -307,7 +307,7 @@ for ele = 1:ES.Nelem
                 Ux = [ N , w1 , w2 ] * UGLele(1:2:17) ; % Componente x del desplazamiento interpolado al punto de Gauss
                 Uy =  [ N , w1 , w2 ] * UGLele(2:2:18) ; % Idem componetne Y
 
-                DerTopG = SigmaP'*Eps + (1-gammaP) * (b(1) * Ux + b(2)*Uy ); % Derivada topologica en el punto de Gauss
+                DerTopG = SigmaP'*Eps + (gammaP-1) * (b(1) * Ux + b(2)*Uy ); % Derivada topologica en el punto de Gauss
                 % Nota, como b ya tiene incorporado el gamma por ser el del
                 % vacio y el gammaP ya tiene el 1/gamma . esta formula es
                 % correcta
@@ -416,7 +416,7 @@ for ele = 1:ES.Nelem
             Ux = N * Uele(1:2:5) ; % Componente x del desplazamiento interpolado al punto de Gauss
             Uy = N * Uele(2:2:6) ; % Idem componetne Y
 
-            DerTopG = dot(SigmaP, Eps) + (1-gammaP) * (b(1) * Ux + b(2)*Uy ); % Derivada topologica en el punto de Gauss
+            DerTopG = dot(SigmaP, Eps) + (gammaP-1) * (b(1) * Ux + b(2)*Uy ); % Derivada topologica en el punto de Gauss
             % Nota, como b ya tiene incorporado el gamma por ser el del
             % vacio y el gammaP ya tiene el 1/gamma . esta formula es
             % correcta
@@ -519,7 +519,7 @@ for ele = 1:ES.Nelem
             Ux = N  * Uele(1:2:5) ; % Componente x del desplazamiento interpolado al punto de Gauss
             Uy = N  * Uele(2:2:6) ; % Idem componetne Y
 
-            DerTopG = dot(SigmaP, Eps) + (1-gammaP) * (b(1) * Ux + b(2)*Uy ); % Derivada topologica en el punto de Gauss
+            DerTopG = dot(SigmaP, Eps) + (gammaP - 1) * (b(1) * Ux + b(2)*Uy ); % Derivada topologica en el punto de Gauss
             DerTopG = 2 * DerTopG; %Pasaje de ptencial total a complacencia.
             
             ValPerNodo = ( N * DerTopG )'; % Valores por nodo en este punto
