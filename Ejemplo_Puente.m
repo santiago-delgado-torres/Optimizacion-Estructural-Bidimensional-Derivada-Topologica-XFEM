@@ -3,10 +3,10 @@
 % =========================================================================
 clc
 path(pathdef)
-clear all
+clearvars -except ELC ELS
 close all
 
-addpath(genpath('.'));
+addpath(genpath('../../..'));
 % =========================================================================
 % == Definicion de la Estructura ==========================================
 % =========================================================================
@@ -344,7 +344,7 @@ ES.MeshReg=true; % Es una malla regular (para seleccion del suavizado)
 
 
 M = 0.3; % Porcentaje del volumen a buscar
-c = 1200; %Valor para el coeficiente de penalidad del volumen al cuadrado (Lagrangiano fijo)
+c = 2800 %Valor para el coeficiente de penalidad del volumen al cuadrado (Lagrangiano fijo)
 alpha = 0; %Valor para el coeficiente de penalidad de las tensiones.e
 TolDeltaV = 0.005; % En fraccion, minimo deltavolumen si se usa el indicador
 % como siguiente iteracion (Kappa=1)
@@ -353,7 +353,7 @@ TolDeltaV = 0.005; % En fraccion, minimo deltavolumen si se usa el indicador
 DeltaVMax= 1; %Cuanto es el DeltaVolumen maximo admisible en una iteracion (En fraccion del total)
 TolM = 1e-2; % Fraccion de volumen respecto a la cual M se considera que se llego
 MaxSit=10;
-Smooth=0.35;
+Smooth=0.45;
 DeCaSmooth = 1.2; % Coeficiente de decaimiento del smooth
 
 % ESTA FORMA PUEDE NO SER LA MEJOR PARA MULTIPLES CASOS DE CARGA PUES
@@ -362,4 +362,4 @@ DeCaSmooth = 1.2; % Coeficiente de decaimiento del smooth
 
 ES = Optimizacion(ES,M,c,alpha,TolDeltaV,DeltaVMax,TolM,MaxSit,Smooth,DeCaSmooth);
 
-save('EstructuraFinal.mat','ES','M','c','alpha','TolDeltaV','DeltaVMax','TolM','MaxSit','DeCaSmooth','Smooth','-v7.3')
+save(['EstructuraFinal_c',num2str(ELC),'_smooth_',num2str(100*ELS),'.mat'],'ES','M','c','alpha','TolDeltaV','DeltaVMax','TolM','MaxSit','DeCaSmooth','Smooth','-v7.3')
