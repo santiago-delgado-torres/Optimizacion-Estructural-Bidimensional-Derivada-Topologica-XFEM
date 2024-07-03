@@ -3,10 +3,10 @@
 % =========================================================================
 clc
 path(pathdef)
-clearvars -except ELC ELS
+clear all
 close all
 
-addpath(genpath('../../..'));
+addpath(genpath('.'));
 % =========================================================================
 % == Definicion de la Estructura ==========================================
 % =========================================================================
@@ -362,4 +362,4 @@ DeCaSmooth = 1.2; % Coeficiente de decaimiento del smooth
 
 ES = Optimizacion(ES,M,c,alpha,TolDeltaV,DeltaVMax,TolM,MaxSit,Smooth,DeCaSmooth);
 
-save(['EstructuraFinal_c',num2str(ELC),'_smooth_',num2str(100*ELS),'.mat'],'ES','M','c','alpha','TolDeltaV','DeltaVMax','TolM','MaxSit','DeCaSmooth','Smooth','-v7.3')
+save('EstructuraFinal_Puente.mat','ES','M','c','alpha','TolDeltaV','DeltaVMax','TolM','MaxSit','DeCaSmooth','Smooth','-v7.3')

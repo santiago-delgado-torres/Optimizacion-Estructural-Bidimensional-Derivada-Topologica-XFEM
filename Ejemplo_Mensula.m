@@ -360,4 +360,4 @@ DeCaSmooth = 1.2; % Coeficiente de decaimiento del smooth
 
 ES = Optimizacion(ES,M,c,alpha,TolDeltaV,DeltaVMax,TolM,MaxSit,Smooth,DeCaSmooth);
 
-save('EstructuraFinal.mat','ES','M','c','alpha','TolDeltaV','DeltaVMax','TolM','MaxSit','DeCaSmooth','Smooth','-v7.3')
+save('EstructuraFinal_Mensula.mat','ES','M','c','alpha','TolDeltaV','DeltaVMax','TolM','MaxSit','DeCaSmooth','Smooth','-v7.3')
