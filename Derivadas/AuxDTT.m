@@ -1,7 +1,7 @@
-function DerTop = AuxDTT(Eps,Sigma,Ea,lambda,mu,rho,eta,xi,gamma1,gamma0,CharFun,SigmaM)
+function DerTop = AuxDTT(Eps,Sigma,Ea,la,mu,alpha1,alpha2,gamma,CharFunDom,SigmaM,CharFunEst,signoLevelSet,FVol,desplaAdj,InteInsolMat)
 % Funcion que a partir de las entradas que se ennumeran a continuacion 
 % devuelve el valor de la derivada topologica del funcional de tensiones
-% segun Amstutz 2010.
+% segun Amstutz 2010 con las modificaciones de Delgado 2024 (Tesis)
 % 
 % Entradas:
 % Eps: Vector de deformaciones del elemento en el punto que se este
@@ -14,18 +14,24 @@ function DerTop = AuxDTT(Eps,Sigma,Ea,lambda,mu,rho,eta,xi,gamma1,gamma0,CharFun
 %
 % Ea: Con formato igual a Eps, deformaciones del problema adjunto.
 %
-% lambda y mu: Parametros de Lame.
+% la, mu: Parametros de lame. - Se podrian
+% calcular pero... para que?
 % 
-% rho, eta y xi son los valores de rho, eta y xi segun el paper.
-% 
-% gamma1 y gamma0 son los valores de los coeficientes gamma del paper,
-% siendo el primero el del material a agregar y el segundo el del actual.
+% alpha1 y alpha2, los parametros materiales combinads
 %
-% CharFun: Funcion caracteristica del dominio. Con fines practicos es ver
-% si en los nodos que se va a agregar la derivada se integra el funcional o
-% no.
+% gamma: Contraste
+%
+% CharFunDom: Funcion caracteristica del dominio de tension
 %
 % SigmaM: Tension maxima.
+% 
+% CharFunEst: Funcion caracteristica de si el punto es estructura o no
+%
+% signoLevelSet: Signo de la funcion de nivel
+%
+% FVol: Densidad de fuerzas de volumen
+%
+% desplaAdj: "Desplazamiento" del adjunto
 % 
 % Devuelve:
 %
@@ -38,152 +44,123 @@ function DerTop = AuxDTT(Eps,Sigma,Ea,lambda,mu,rho,eta,xi,gamma1,gamma0,CharFun
 DerTop = 0; % Se inicializan como nulos
 
 % =========================================================================
-% === Parametros que importan a lo largo de toda la derivada ==============
+% === Definicion de tensores ==============================================
 % =========================================================================
 
-% Formato matricial para el tensor B para ser aplicado a Sigma
-BTens = [ 4*mu + lambda ,   lambda - 2*mu  ,  0   ;
-      lambda - 2*mu ,   4*mu + lambda  ,  0   ;
-            0       ,        0         , 6*mu];
+ICuatro = eye(3); % Tensor identidad de cuarto orden
+IDos = [1,1,0;1,1,0;0,0,0]; % Identidad segundo orden tensorial identidad segundo orden
 
-% Formato matricial para el tensor Btilde
-BtildeTens = [2,-1,0;
-              -1,2,0;
-              0,0,3];
+BTensor = 6*mu*ICuatro + (la-2*mu)*IDos;
 
- 
-        
-% Tensor B aplicado a sigma.
-BS = BTens*Sigma; 
+BTildeTensor = 3*ICuatro - IDos;
 
-% Tension de von Mises al cuadrado, calculada con la expresion de
-% BS.Epsilon
-SVM2 = 0.5 * ( BS(1)*Eps(1) + BS(2)*Eps(2) + BS(3)*Eps(3));
+TTensor = ((1-gamma)/(1+alpha2*gamma)) * (alpha2*ICuatro + 0.5*((alpha1-alpha2)/(1+alpha1*gamma))*IDos);
 
-% Derivada de phi para el calculo de k1 y algo mas
-t = SVM2 / (SigmaM)^2; % Tension relativa
+STensor = ( (pi * (1-gamma)^2) / (4*SigmaM^2*(1+alpha2*gamma)^2)) * ( 10*ICuatro + ( 3 * ( (1+alpha2*gamma)/(1+alpha1*gamma))^2 - 5)*IDos); 
+
+% =========================================================================
+% === Primer termino ======================================================
+% =========================================================================
+
+ITS = (ICuatro+TTensor)*Sigma; 
+DerTop = DerTop + (gamma-1) * ITS' * Ea; % El producto escalar funciona asi porque la tercer entrada de Ea es el doble que la componente real del tensor.
+
+% =========================================================================
+% === Segundo termino =====================================================
+% =========================================================================
+
+DerTop = DerTop - (gamma-1) * FVol*desplaAdj; 
+
+% =========================================================================
+% === Tercer termino ======================================================
+% =========================================================================
+
+
+SVM2 = ( (Sigma(1) + Sigma(2))^2 - 3 *(Sigma(1)*Sigma(2) - Sigma(3)^2)); % Tension de von mises al cuadrado
+
+t = SVM2/SigmaM^2; % Tension relativa al cuadrado
+
 % Si t es tamaño "razonable" no hay problemas numéricos, pero si t pasa a
 % ser muy grande la precisión es baja por lo cual se estudian los
 % siguientes casos:
 if t<= 1e7 % Se experimento y parecía funcionar hasta t = 1e9 pero para estar seguros
-    dPhidSVM2 =  (1 + t^32) ^ (-31/32) * t^31;
+    dPhidt =  (1 + t^32) ^ (-31/32) * t^31;
+    PhiPosta = (1+t^32)^(1/32)-1;
 else % si se pasa, ya conviene asumir 1+t^32 = t^32 en cuyo caso
-    dPhidSVM2 = 1;
-end % RECORDATORIO SE ELIMINO EL 1/SIGMAM2
+    dPhidt = 1;
+    PhiPosta = t-1;
+end % Recordatorio esto es la derivada de la funcion psi, no de ella respecto a la tension
 
-% Valor de k1
-k1 = dPhidSVM2 * CharFun;
+TBS = TTensor * BTensor  * Sigma;
 
-% Valor de gamma
-gamma = gamma1/gamma0;
-
-% Tensor T en formato matricial
-T1 = eta * eye(3); % Componente de eta * Tensor identidad de cuarto orden
-T2 = 0.5 * ( xi - eta ) / ( 1 + gamma*xi ) ; % Coeficiente del termino del Id2 tensorial Id2
-T2 = T2 * [ 1 , 1 , 0;
-            1, 1, 0;
-            0, 0, 0]; % Componente de coef * Id2orden tensorial Id2orden
-T = T1+T2; % Tensor T
-
+DerTop = DerTop -CharFunDom * signoLevelSet * dPhidt * TBS'*Eps / SigmaM^2 ;
 
 % =========================================================================
-% === Primer Termino de la Derivada =======================================
+% === Cuarto Termino ======================================================
 % =========================================================================
 
-TBS = T*BS; % Tensor T aplicado a BS
-% El pi es eliminado mediante haber elegido f como piepsilon^2 en vez de
-% epsilon^2 como usa el paper.
-PrimerTermino = - ( gamma1 - gamma0 ) *  ( rho * k1 * ( TBS(1)*Eps(1) + TBS(2)*Eps(2) + TBS(3)*Eps(3) ) );
-
-DerTop = DerTop + PrimerTermino;
+DerTop = DerTop - CharFunDom*signoLevelSet * PhiPosta;
 
 % =========================================================================
-% === Segundo Termino de la Derivada ======================================
+% === Quinto Termino ======================================================
 % =========================================================================
 
-rhoTminusI = rho*T - eye(3); %Se crea el tensor rhoT - Identidad de 4to orden
+BTildeS = BTildeTensor*Sigma;
+TBTildeS = TTensor * BTildeS;
+TBSS = TBTildeS(1)*Sigma(1) + TBTildeS(2)*Sigma(2) + 2*TBTildeS(3)*Sigma(3);
+t2 = TBSS/SigmaM^2;
+TBTildeTS = TTensor * BTildeTensor * TTensor * Sigma;
+TBTSS = TBTildeTS(1)*Sigma(1) + TBTildeTS(2)*Sigma(2) + 2*TBTildeTS(3)*Sigma(3);
+t3 = TBTSS/(2*SigmaM^2);
+t4 = t + t2 + t3;
 
-STS = rhoTminusI*Sigma; % Tensor rho T - Identidad de 4to orden aplicado a S
-% El pi es eliminado mediante haber elegido f como piepsilon^2 en vez de
-% epsilon^2 como usa el paper.
-SegundoTermino = - ( gamma1 - gamma0 ) *   ( STS(1)*Ea(1) + STS(2)*Ea(2) + STS(3)*Ea(3) ) ;
-
-DerTop = DerTop + SegundoTermino;
-
-% =========================================================================
-% === Tercer Termino de la Derivada =======================================
-% =========================================================================
-
-% Btilde aplicado a sigma
-BtildeS = BtildeTens*Sigma;
-
-% Primer valor dentro de la funcion phi
-t1 = 0.5 * (BtildeS(1)*Sigma(1) + BtildeS(2)*Sigma(2) + 2*BtildeS(3)*Sigma(3));
-% En este caso si hay que multiplicar por dos el elemento fuera de la
-% diagonal 
-
-TBtildeS = T*BtildeS; % Tensor T aplicado a BtildeS
-
-% segundo valor dentro de la funcion phi
-t2 = -rho*( TBtildeS(1)*Sigma(1) + TBtildeS(2)*Sigma(2) + 2*TBtildeS(3)*Sigma(3));
-
-TBtildeTS = T*BtildeTens*T*Sigma; % Tensor T aplicado a Btilde aplicado a T aplicado a Sigma;
-
-% Tercer valor dentro de la funcion phi
-t3 = -0.5*rho^2 * ( TBtildeTS(1)*Sigma(1) + TBtildeTS(2)*Sigma(2) + 2*TBtildeTS(3)*Sigma(3) );
-
-% Suma de los t y division entre SigmaM al cuadrado
-t4 = (t1+t2+t3)/(SigmaM)^2;
-
-% Phi de esto
-% Si t4 es tamaño "razonable" no hay problemas numéricos, pero si t4 pasa a
-% ser muy grande la precisión es baja por lo cual se estudian los
-% siguientes casos:
 if t4<= 1e7 % Se experimento y parecía funcionar hasta t = 1e9 pero para estar seguros
-    Phi_3 = ( 1 + t4^32 )^(1/32) -1;
+    PhiComb = (1+t4^32)^(1/32)-1;
 else % si se pasa, ya conviene asumir 1+t^32 = t^32 en cuyo caso
-    Phi_3 = t4 - 1;
+    PhiComb = t4-1;
+end % 
+
+
+DerTop = DerTop+ CharFunDom * (1-CharFunEst) * (PhiComb - PhiPosta - t2*dPhidt);
+
+% =========================================================================
+% === Sexto Termino =======================================================
+% =========================================================================
+
+SumaTen= Sigma(1)+Sigma(2); % Suma de las tensiones principales
+detS = Sigma(1)*Sigma(2)-Sigma(3)^2;
+DifTen = sqrt( SumaTen^2 - 4*detS); % Diferencia de las tensiones principales
+SumaTen = SumaTen/SigmaM; % Normalizamos
+DifTen = DifTen/SigmaM; % Normalizamos
+
+if SumaTen<-5
+    izq = 1;
+    pesoi = 0;
+elseif SumaTen>=5
+    izq = 1000; 
+    pesoi = 1;
+else 
+    izq = floor(1 + (SumaTen + 5)/0.01);
+    pesoi = min( (SumaTen - 0.01*floor(SumaTen/0.01))/0.01,1); 
 end
 
-TercerTermino = CharFun.*gamma1.*(Phi_3 + rho*k1*( TBtildeS(1)*Sigma(1) + TBtildeS(2)*Sigma(2) + 2*TBtildeS(3)*Sigma(3)));
-
-DerTop = DerTop + TercerTermino;
-
-
-% =========================================================================
-% === Cuarto Termino de la Derivada =======================================
-% =========================================================================
-
-trS = Sigma(1)+Sigma(2); %Traza del tensor
-DetS = Sigma(1)*Sigma(2)-Sigma(3)^2; % Determinante del tensor
-
-SI = 0.5 * ( trS + sqrt( trS^2 -4 * DetS ) ); % Tension principal maxima
-SII = 0.5 * ( trS - sqrt( trS^2 -4*DetS ) ); % Tension princiapl minima
-
-PsiP = PsiPGaussPoints(SI,SII,t1,rho,SigmaM,eta,xi,gamma);
-
-Constante = ( 1 + eta*gamma ) / (1+xi*gamma); %Variable auxiliar que aparece muchas veces
-
-SS = Sigma(1)*Sigma(1) + Sigma(2)*Sigma(2) + 2*Sigma(3)*Sigma(3); % S escalar S
-
-CuartoTermino = 1/pi * gamma0*CharFun.* ( PsiP + 0.25 * rho^2 * k1 * pi * ( 5*( 2*SS -trS^2 ) +3*Constante^2*trS^2 ) );
-
-DerTop = DerTop + CuartoTermino;
-
-% =========================================================================
-% === Quinto Termino de la Derivada =======================================
-% =========================================================================
-
-
-% Si t es tamaño "razonable" no hay problemas numéricos, pero si t pasa a
-% ser muy grande la precisión es baja por lo cual se estudian los
-% siguientes casos:
-if t<= 1e7 % Se experimento y parecía funcionar hasta t = 1e9 pero para estar seguros
-    Phi_5 = ( 1 + t^32 )^(1/32) -1;
-else % si se pasa, ya conviene asumir 1+t^32 = t^32 en cuyo caso
-    Phi_5 = t - 1;
+if DifTen>=5
+    aba = 500;
+    pesoaba = 1;
+else
+    aba = floor( 1 + (DifTen)/0.01); 
+    pesoaba = min ( (DifTen - 0.01*floor(DifTen/0.01))/0.01,1);
 end
 
-QuintoTermino = - CharFun.*gamma0.*Phi_5;
+XiS = (1-pesoi) * ( (1-pesoaba)*InteInsolMat(izq,aba) + pesoaba*InteInsolMat(izq,aba+1)) + ...
+    pesoi * ( (1-pesoaba)*InteInsolMat(izq+1,aba) + pesoaba*InteInsolMat(izq+1,aba+1));
+    
+DerTop = DerTop + CharFunDom * CharFunEst * XiS / pi;
+% =========================================================================
+% === Septimo termino =====================================================
+% =========================================================================
 
-DerTop = DerTop + QuintoTermino;
+SSigma = STensor*Sigma;
+SS = SSigma(1) * Sigma(1) + SSigma(2)*Sigma(2) + 2* SSigma(3)*Sigma(3);
+
+DerTop = DerTop + CharFunDom*CharFunEst*dPhidt*SS/pi;

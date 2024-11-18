@@ -1,6 +1,7 @@
 function ES = DerTop_Tensiones_XFEM(ES)
 % Rutina para hallar la derivada topologica del funcional de tensiones
-% segun el paper de Amstutz 2010.
+% segun el paper de Amstutz 2010 con las modificaciones hechas por Delgado
+% en su tesis.
 %
 % Calcuando las derivadas especiales en los elementos finitos y luego
 % asignando al nodo un valor ponderado (VP) segun la siguiente formula:
@@ -33,6 +34,26 @@ EleCounter = zeros(ES.Nnodo,1); % Y un vector que cuenta los elementos por nodo 
 Uadj = ProbAdjTension(ES); % Campo de "desplazamientos" del problema adjunto.
 
 % =========================================================================
+% === Matriz de integral insoluble ========================================
+% =========================================================================
+
+nuInsol = ES.PropMat(1,3);
+if ES.PEL==2
+    nuInsol = nuInsol/(1-nuInsol);
+end
+Posiblesnu = 0:0.01:1;
+indexnu = min(floor( 1+nuInsol/0.01),100); %Tengo que corregir este
+nu1 = Posiblesnu(indexnu);
+nu2 = Posiblesnu(indexnu+1);
+InteMat1_mat2vac = load(['IntegralInsol_nu_',num2str(nu1),'_ga_1e-3.mat']); InteMat1_mat2vac = InteMat1_mat2vac.InteMat;
+InteMat2_mat2vac = load(['IntegralInsol_nu_',num2str(nu2),'_ga_1e-3.mat']);InteMat2_mat2vac = InteMat2_mat2vac.InteMat;
+InteMat1_vac2mat = load(['IntegralInsol_nu_',num2str(nu1),'_ga_1e3.mat']); InteMat1_vac2mat = InteMat1_vac2mat.InteMat;
+InteMat2_vac2mat = load(['IntegralInsol_nu_',num2str(nu2),'_ga_1e3.mat']); InteMat2_vac2mat = InteMat2_vac2mat.InteMat;
+peso = min((nuInsol-nu1)/0.01,1);
+InteMat_mat2vac = InteMat1_mat2vac * (1-peso) + InteMat2_mat2vac*peso;
+InteMat_vac2mat = InteMat1_vac2mat * (1-peso) + InteMat2_vac2mat*peso;
+
+% =========================================================================
 % === Iteracion en los elementos ==========================================
 % =========================================================================
 
@@ -59,7 +80,7 @@ for ele = 1:ES.Nelem
     % Matlab dice que asi es mas rapido.
     
     % Funcion caracteristica del elemento
-    CharFun = ES.ChequeoSigma(ele); % El chequeo de "En los vacios vale 0" se hace despues
+    CharFun = ES.ChequeoSigma(ele); % Esta es solo asociada a DomTen, la parte de si es estructura o no
 
      % --------------------------------------------
     % Elemento extendido -------------------------
@@ -205,20 +226,25 @@ for ele = 1:ES.Nelem
             % Ya aprovechemos y sumemos al contador:
             EleCounter(ne) = EleCounter(ne) + Jse.*ones(3,1);
             
-            % Asignacion de propiedades del material estructural (luego
-            % corregimos con el gamma)
-            E = ES.PropMat(2,2); %Young
-            nu = ES.PropMat(2,3); %Poisson
+            
             
             % Seleccion del material
             if psiRep<0 % Vacio
-                gamma1 = 1; %Gamma del material al que se cambiaria
-                gamma0 = ES.gamma; % gamma del material actual
-                CharFunSE = 0; % Funcion caracteristica modificada si es vacio
+                E = ES.PropMat(1,2); %Young
+                nu = ES.PropMat(1,3); % Poisson
+                signo = -1;
+                CharFunEst = 0; % Funcon caracteristica de si es elemento estructural
+                gamma = 1/ES.gamma;  %El contraste es el inveso si es vacio
+                b=ES.CB.Neu.Vol(1,:);  % Fuerza de volumen
+                InteMat = InteMat_vac2mat;
             else
-                gamma1 = ES.gamma;
-                gamma0 = 1;
-                CharFunSE = CharFun;
+                E = ES.PropMat(2,2); %Young
+                nu = ES.PropMat(2,3); % Poisson
+                signo = 1;
+                CharFunEst = 1; % Funcon caracteristica de si es elemento estructural
+                gamma = ES.gamma;
+                b=ES.CB.Neu.Vol(2,:);  % Fuerza de volumen
+                InteMat = InteMat_mat2vac;
             end
             
             % Parametros de Lame
@@ -230,15 +256,11 @@ for ele = 1:ES.Nelem
                lambda = nu*E/( ( 1+nu)*(1-2*nu));
             end
 
-            % Valor de eta y xi segun paper (para distinguirlas de las
-            % coordenadas de los elementos finitos se les pone un subindice M)
+            % Alpha 1 y Alpha2
 
-            etaM = (lambda+3*mu) / (lambda + mu); % El (3-nu)/(1+nu) del paper es para EPT y en EPD vale 3 - 4*nu pero en ambos casos vale eso respecto a Lame
-            xiM = ( lambda + mu ) / mu; % Algo similar ocurre con el ( 1+nu)/(1-nu) del paper que es para EPT 
-
-            % Valor de rho. Depende del material pero ya se resolvio eso.
-
-            rho = (gamma1 - gamma0) / (etaM * gamma1 + gamma0);
+            alpha2 = (lambda+3*mu) / (lambda + mu); 
+            alpha1 = ( lambda + mu ) / mu; 
+            
 
             % Tensor constitutivo
             C = [lambda+2*mu, lambda,      0;
@@ -283,7 +305,9 @@ for ele = 1:ES.Nelem
                 % Funciones para definir los g
                 g1 = Nse * Ar1;
                 g2 = Nse * Ar2;
-                
+                % Funciones w
+                w1 = N*g1;
+                w2 = N*g2;
                 
                 % Derivadas de las funciones de interpolacion extendidas
                 dg1_detachi = dNse_detachi*Ar1; % DErivada de g respecto a las intrinsecas
@@ -315,18 +339,18 @@ for ele = 1:ES.Nelem
                 % distorsion angular y no la componente del tensor.
 
                  % Vector de tensiones elementales
-                Sigma=C*Eps; % No es necesario dividir entre gamma0 pues se considero un C 
-                % ya con los parametros materiales (es decir con gamma0 =
-                % 1)
+                Sigma=C*Eps; 
                 
                 % Vector de "deformaciones" adjuntas elementales
                 Ea = B*UGLAdjele;
+                
+                desplaAdj = zeros(2,1); 
+                desplaAdj(1) = [ N , w1 , w2 ] * UGLAdjele(1:2:17) ; % Componente x del desplazamiento adjunto interpolado al punto de Gauss
+                desplaAdj(2) =  [ N , w1 , w2 ] * UGLAdjele(2:2:18) ; % Idem componetne Y
 
                 % Se obtiene la derivada topologica para este estado.
-                DerTopG = AuxDTT(Eps,Sigma,Ea,lambda,mu,rho,etaM,xiM,gamma1,gamma0,CharFunSE,ES.SigmaM);
-                % No se incluye division entre gamma0 para lambda y mu
-                % porque ya son los del caso de gamma = 1 (normalizar es
-                % dividir entre 1 y no aplica).
+                DerTopG = AuxDTT(Eps,Sigma,Ea,lambda,mu,alpha1,alpha2,gamma,CharFun,ES.SigmaM,CharFunEst,signo,b,desplaAdj,InteMat);
+               
                 
                 ValPerNodo = ( N .* DerTopG )'; % Valores por nodo en este punto
                 
@@ -345,8 +369,9 @@ for ele = 1:ES.Nelem
     % Elemento vacio -----------------------------
     elseif ES.VA(ele)
      
-        CharFun = 0; % Modificacion de la funcionc aracterstica
-        
+        CharFunEst = 0; 
+        signo = -1;
+        b=ES.CB.Neu.Vol(1,:);  % Fuerza de volumen
         
         % Ya aprovechemos y sumemos al contador:
         EleCounter(ne) = EleCounter(ne) + ones(3,1);
@@ -355,8 +380,7 @@ for ele = 1:ES.Nelem
         % Asignacion de propiedades del material vacio
         E = ES.PropMat(1,2); %Young
         nu = ES.PropMat(1,3); %Poisson
-        gamma1 = 1; %El gamma del material al que se cambiaria (en este caso el material)
-        gamma0 = ES.gamma; %El gamma del material actual (en este caso el vacio)
+        gamma = 1/ES.gamma; %El gamma del material actual (en este caso el vacio)
         
         % Parametros de Lame
         if ES.PEL==1
@@ -367,18 +391,10 @@ for ele = 1:ES.Nelem
            lambda = nu*E/( ( 1+nu)*(1-2*nu));
         end
         
-        % Valor de eta y xi segun paper (para distinguirlas de las
-        % coordenadas de los elementos finitos se les pone un subindice M)
+        % Alpha 1 y Alpha2
+        alpha2 = (lambda+3*mu) / (lambda + mu); 
+        alpha1 = ( lambda + mu ) / mu;
         
-        etaM = (lambda+3*mu) / (lambda + mu); % El (3-nu)/(1+nu) del paper es para EPT y en EPD vale 3 - 4*nu pero en ambos casos vale eso respecto a Lame
-        xiM = ( lambda + mu ) / mu; % Algo similar ocurre con el ( 1+nu)/(1-nu) del paper que es para EPT 
-        % NOTA: Estos parametros solamente dependen del coeficiente de
-        % Poisson por ende no se ven afectados al haber considerado mu y
-        % lambda del material
-        
-        % Valor de rho. Depende del material pero ya se resolvio eso.
-        
-        rho = (gamma1 - gamma0) / (etaM * gamma1 + gamma0);
         
         % Como en el elemento tradicional tanto las tensiones, como las
         % deformaciones e incluso el Ea del problema adjunto son UNIFORMES.
@@ -413,12 +429,7 @@ for ele = 1:ES.Nelem
             0,            0,           mu];
 
         % Vector de tensiones elementales
-        Sigma=C*Eps/gamma0; % La division entre gamma0 es para consistencia con el paper.
-        
-        
-        % Se obtiene la derivada topologica para este estado.
-        DerTopG = AuxDTT(Eps,Sigma,Ea,lambda/gamma0,mu/gamma0,rho,etaM,xiM,gamma1,gamma0,CharFun',ES.SigmaM);
-        % /gamma0 en lambda y mu es para ser consistente con el paper.
+        Sigma=C*Eps;
         
         % 1 PUNTO DE GAUSS EN TRIANGULOS.
         % (1 punto alcanza para integrar exactamente polinomios de
@@ -429,6 +440,16 @@ for ele = 1:ES.Nelem
         N3 = 1/3; % Idem N3
         PesoG = 0.5; % Peso del punto.
         N=[N1,N2,N3]; % En formato vector estas 3
+        
+        desplaAdj = zeros(2,1);
+        desplaAdj(1) = N*Uadjele(1:2:5);
+        desplaAdj(2) = N*Uadjele(2:2:6);
+        
+        % Se obtiene la derivada topologica para este estado.
+        DerTopG = AuxDTT(Eps,Sigma,Ea,lambda,mu,alpha1,alpha2,gamma,CharFun,ES.SigmaM,CharFunEst,signo,b,desplaAdj,InteMat_vac2mat);
+               
+        
+        
      
         ValPerNodo = ( N .* DerTopG)';
        
@@ -445,8 +466,10 @@ for ele = 1:ES.Nelem
         % Asignacion de propiedades del material estructural
         E = ES.PropMat(2,2); %Young
         nu = ES.PropMat(2,3); %Poisson
-        gamma1 = ES.gamma; %El gamma del material al que se cambiaria (en este caso el vacio)
-        gamma0 = 1; %El gamma del material actual (en este caso el material)
+        gamma = ES.gamma;
+        signo = 1;
+        CharFunEst = 1;
+        b=ES.CB.Neu.Vol(2,:);  % Fuerza de volumen
         
         % Parametros de Lame
         if ES.PEL==1
@@ -456,16 +479,9 @@ for ele = 1:ES.Nelem
            mu = E/(2*(1+nu));
            lambda = nu*E/( ( 1+nu)*(1-2*nu));
         end
-        
-        % Valor de eta y xi segun paper (para distinguirlas de las
-        % coordenadas de los elementos finitos se les pone un subindice M)
-        
-        etaM = (lambda+3*mu) / (lambda + mu); % El (3-nu)/(1+nu) del paper es para EPT y en EPD vale 3 - 4*nu pero en ambos casos vale eso respecto a Lame
-        xiM = ( lambda + mu ) / mu; % Algo similar ocurre con el ( 1+nu)/(1-nu) del paper que es para EPT 
-        
-        % Valor de rho. Depende del material pero ya se resolvio eso.
-        
-        rho = (gamma1 - gamma0) / (etaM * gamma1 + gamma0);
+        % Alpha 1 y Alpha2
+        alpha2 = (lambda+3*mu) / (lambda + mu); 
+        alpha1 = ( lambda + mu ) / mu;
         
         % Como en el elemento tradicional tanto las tensiones, como las
         % deformaciones e incluso el Ea del problema adjunto son UNIFORMES.
@@ -500,13 +516,8 @@ for ele = 1:ES.Nelem
             0,            0,           mu];
 
         % Vector de tensiones elementales
-        Sigma=C*Eps/gamma0; % La division entre gamma0 es para consistencia con el paper.
+        Sigma=C*Eps; 
         
-        
-        
-        % Se obtiene la derivada topologica para este estado.
-        DerTopG = AuxDTT(Eps,Sigma,Ea,lambda/gamma0,mu/gamma0,rho,etaM,xiM,gamma1,gamma0,CharFun',ES.SigmaM);
-        % /gamma0 en lambda y mu es para ser consistente con el paper.
         
         % 1 PUNTO DE GAUSS EN TRIANGULOS.
         % (1 punto alcanza para integrar exactamente polinomios de
@@ -517,6 +528,16 @@ for ele = 1:ES.Nelem
         N3 = 1/3; % Idem N3
         PesoG = 0.5; % Peso del punto.
         N=[N1,N2,N3]; % En formato vector estas 3
+        
+        desplaAdj = zeros(2,1);
+        desplaAdj(1) = N*Uadjele(1:2:5);
+        desplaAdj(2) = N*Uadjele(2:2:6);
+        
+        
+        % Se obtiene la derivada topologica para este estado.
+        DerTopG = AuxDTT(Eps,Sigma,Ea,lambda,mu,alpha1,alpha2,gamma,CharFun,ES.SigmaM,CharFunEst,signo,b,desplaAdj,InteMat_mat2vac);
+               
+        
      
         ValPerNodo = ( N .* DerTopG)';
        

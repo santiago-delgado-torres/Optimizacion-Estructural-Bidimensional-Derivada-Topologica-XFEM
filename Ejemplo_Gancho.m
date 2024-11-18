@@ -300,8 +300,8 @@ end
 
 
 M = 0.5; % Porcentaje del volumen a buscar
-c = 1; %Valor para el coeficiente de penalidad del volumen al cuadrado (Lagrangiano fijo)
-alpha = 100; %Valor para el coeficiente de penalidad de las tensiones.e
+c = 2; %Valor para el coeficiente de penalidad del volumen al cuadrado (Lagrangiano fijo)
+alpha = 1e5; %Valor para el coeficiente de penalidad de las tensiones.e
 TolDeltaV = 0.01; % En fraccion, minimo deltavolumen si se usa el indicador
 % como siguiente iteracion (Kappa=1)
 % Si este volumen es muy chico se considera que se encontro la estructura
@@ -309,7 +309,7 @@ TolDeltaV = 0.01; % En fraccion, minimo deltavolumen si se usa el indicador
 DeltaVMax= 1; %Cuanto es el DeltaVolumen maximo admisible en una iteracion (En fraccion del total)
 TolM = 1e-2; % Fraccion de volumen respecto a la cual M se considera que se llego
 MaxSit=10;
-Smooth=4e-3;
+Smooth=3.5e-3;
 ES.SigmaM = 25; %Tension limite 
 DeCaSmooth = 1.3; % Coeficiente de decaimiento del smooth
 
