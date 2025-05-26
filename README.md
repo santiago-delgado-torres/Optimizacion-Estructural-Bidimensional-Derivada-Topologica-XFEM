@@ -20,6 +20,12 @@ En la carpeta "MallasNotEst" se encuentran algunos scripts para la lectura de ma
 
 Finalmente, en la carpeta "OtrosScripts" se encuentran otros códigos utilizados para la matriz de masa, área de la estructura y el código de suavizado.
 
+## Referencia
+
+Si usas este repositorio en tu trabajo, por favor cita la siguiente publicación:
+
+Delgado, S. y Canelas, A. (2025). Optimizacion Estructural Bidimensional Derivada Topologica XFEM (Versión 1.0.0) [Repositorio GitHub]. Zenodo. https://doi.org/10.5281/zenodo.15521725
+
 ## Contacto
 
 Se puede contactar al autor mediante el correo santiago.delgado@fing.edu.uy
