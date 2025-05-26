@@ -24,7 +24,7 @@ Finalmente, en la carpeta "OtrosScripts" se encuentran otros códigos utilizados
 
 Si usas este repositorio en tu trabajo, por favor cita la siguiente publicación:
 
-Delgado, S. y Canelas, A. (2025). Optimizacion Estructural Bidimensional Derivada Topologica XFEM (Versión 1.0.0) [Repositorio GitHub]. Zenodo. https://doi.org/10.5281/zenodo.15521725
+Delgado, S. y Canelas, A. (2025). Optimización Estructural Bidimensional usando la Derivada Topologica y el XFEM (Versión 1.0.0) [Repositorio GitHub]. Zenodo. https://doi.org/10.5281/zenodo.15521725
 
 ## Contacto
 
